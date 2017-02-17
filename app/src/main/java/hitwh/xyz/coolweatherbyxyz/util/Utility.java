@@ -3,6 +3,8 @@ package hitwh.xyz.coolweatherbyxyz.util;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,6 +12,7 @@ import org.json.JSONObject;
 import hitwh.xyz.coolweatherbyxyz.db.City;
 import hitwh.xyz.coolweatherbyxyz.db.County;
 import hitwh.xyz.coolweatherbyxyz.db.Province;
+import hitwh.xyz.coolweatherbyxyz.gson.Weather;
 
 /**
  * Created by ASUS on 2017/2/15.
@@ -23,6 +26,7 @@ public class Utility {
      * @return 成功或失败
      */
     private static final String TAG = "Utility";
+
     public static boolean handleProvinceResponse(String response){
         if (!TextUtils.isEmpty(response)){
             try {
@@ -52,7 +56,8 @@ public class Utility {
     public static boolean handleCityResponse(String response,int provinceId){
         if (!TextUtils.isEmpty(response)) {
             try {
-//                Log.d(TAG, "handleCityResponse: "+response);
+             Log.d(TAG, "handleCityResponse: "+response);
+
                 JSONArray allCities = new JSONArray(response);
                 for (int i = 0;i<allCities.length();i++){
                     JSONObject cityObject = allCities.getJSONObject(i);
@@ -100,5 +105,23 @@ public class Utility {
             }
         }
         return false;
+    }
+
+    /**
+     * 将返回的JSON数据解析成Weather类
+     * @param response
+     * @return
+     */
+    public static Weather handleWeatherResponse(String response) {
+        try {
+            Log.d(TAG, "handleWeatherResponse: response"+response);
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.getJSONArray("HeWeather");
+            String weatherContent = jsonArray.getJSONObject(0).toString();
+            return new Gson().fromJson(weatherContent, Weather.class);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -1,6 +1,7 @@
 package hitwh.xyz.coolweatherbyxyz;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -98,10 +99,33 @@ public class ChooseAreaFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel ==LEVEL_PROVINCE) {
                     selectedProvince = provinceList.get(position);
+                    Log.d(TAG, "onItemClick: 点击了省级:"+selectedProvince.getPeovinceName());
                     queryCities();
                 } else if (currentLevel == LEVEL_CITY){
                     selectedCity = cityList.get(position);
-                    queryCountyes();
+                    Log.d(TAG, "onItemClick: 点击了市级:"+selectedCity.getCityName());
+                    queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    String weatherId = countyList.get(position).getWeatherId();
+                    /*
+                        用instanceof来判断是在哪个activity中
+                        根据结果判断是 初始时选择城市（之前的代码）
+                         或者 更换城市（关闭抽屉，刷新并重新获取天气）
+                     */
+
+
+                    if (getActivity() instanceof MainActivity) {
+                        Log.d(TAG, "onItemClick: 点击了县区:"+countyList.get(position).getCountyName());
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        activity.requestWeather(weatherId);
+                    }
                 }
             }
         });
@@ -111,7 +135,7 @@ public class ChooseAreaFragment extends Fragment {
                 if (currentLevel == LEVEL_COUNTY) {
                     queryCities();
                 }else if (currentLevel == LEVEL_CITY){
-                    queryCountyes();
+                    queryProvinces();
                 }
             }
         });
@@ -157,21 +181,20 @@ public class ChooseAreaFragment extends Fragment {
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
             currentLevel = LEVEL_CITY;
-        }else {
+        } else {
             int provinceCode = selectedProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/"+provinceCode;
             queryFromServer(address,"city");
         }
-
     }
 
     /**
      * 查询全市所有的区县，优先从数据库查询，若没有则从服务器查找
      */
-    private void queryCountyes() {
+    private void queryCounties() {
         titleText.setText(selectedCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid = ?",String.valueOf(selectedCity.getCityCode())).find(County.class);
+        countyList = DataSupport.where("cityid = ?",String.valueOf(selectedCity.getId())).find(County.class);
         if (countyList.size()>0) {
             dataList.clear();
             for (County county:countyList) {
@@ -185,6 +208,7 @@ public class ChooseAreaFragment extends Fragment {
             int cityCode = selectedCity.getCityCode();
             String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
             queryFromServer(address,"county");
+//            Log.d(TAG, "queryCounties: 66666");
         }
 
 
@@ -234,7 +258,8 @@ public class ChooseAreaFragment extends Fragment {
                             } else if ("city".equals(type)) {
                                 queryCities();
                             } else if ("county".equals(type)) {
-                                queryProvinces();
+                                queryCounties();
+//                                Log.d(TAG, "run: queryCounties()已执行");
                             }
                         }
                     });
